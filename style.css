@@ -544,3 +544,41 @@
         width: 100%;
     }
 }
+/* 手機及窄視窗排版修正 */
+@media (max-width: 600px) {
+
+    /* 今日結算：標題、金額、明細依序排列 */
+    .summary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .summary > div:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .summary .money {
+        min-width: 0;
+        padding: 12px;
+    }
+
+    .summary .money span {
+        font-size: 14px;
+    }
+
+    .summary #toggleDetail {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    /* 編輯行程：避免輸入框重疊 */
+    .two {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* 導覽列：小螢幕允許自然換行 */
+    nav {
+        flex-wrap: wrap;
+    }
+}
