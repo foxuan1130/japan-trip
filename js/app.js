@@ -3,88 +3,9 @@ const KEY = 'japan_trip_v1_1';
 const dates = ['12/28', '12/29', '12/30', '12/31', '01/01', '01/02', '01/03', '01/04', '01/05', '01/06', '01/07'];
 const seed = {
     day: 0,
-    
-    items: [
-        {
-            id: 'flight-arrival',
-            date: '12/28',
-            time: '17:10',
-            name: '抵達關西國際機場',
-            place: '關西國際機場',
-            lat: 34.4347,
-            lng: 135.2440,
-            desc: '班機抵達大阪，準備入境及領取行李'
-        },
-        {
-            id: 'usj-countdown',
-            date: '12/31',
-            time: '',
-            name: '日本環球影城跨年',
-            place: '日本環球影城',
-            lat: 34.6654,
-            lng: 135.4323,
-            desc: 'USJ 跨年活動，入場時間待確認'
-        },
-        {
-            id: 'street-kart',
-            date: '12/29',
-            time: '',
-            name: '大阪街頭卡丁車',
-            place: '',
-            lat: '',
-            lng: '',
-            desc: '日期、時間與店家待確認'
-        },
-        {
-            id: 'lesbian-bar',
-            date: '12/29',
-            time: '',
-            name: '大阪女同酒吧',
-            place: '',
-            lat: '',
-            lng: '',
-            desc: '已選定酒吧，日期與時間待安排'
-        },
-        {
-            id: 'miracle-world',
-            date: '12/29',
-            time: '',
-            name: 'MIRACLE WORLD',
-            place: '',
-            lat: '',
-            lng: '',
-            desc: '日期、時間與地址待確認'
-        },
-        {
-            id: 'airport-return',
-            date: '01/07',
-            time: '12:25',
-            name: '抵達關西國際機場',
-            place: '關西國際機場',
-            lat: 34.4347,
-            lng: 135.2440,
-            desc: '預計起飛前三小時抵達機場'
-        },
-        {
-            id: 'flight-departure',
-            date: '01/07',
-            time: '15:25',
-            name: '班機起飛・離開大阪',
-            place: '關西國際機場',
-            lat: 34.4347,
-            lng: 135.2440,
-            desc: '日本旅程結束'
-        }
-    ],
-
-    expenses: [
-        { id: 'e1', date: '12/28', name: '晚餐（道頓堀）', total: 3000, payer: 'Josh', ccx: 1500, josh: 1500 },
-        { id: 'e2', date: '12/28', name: '藥妝採買', total: 800, payer: 'CCX', ccx: 800, josh: 0 }
-    ],
-    tasks: [
-        { id: 't1', text: '確認護照與機票', done: false },
-        { id: 't2', text: '準備網路與交通卡', done: false }
-    ]
+    items: [],
+    expenses: [],
+    tasks: []
 };
 
 const $ = id => document.getElementById(id);
@@ -1160,7 +1081,7 @@ const hasPendingBackup = checkPendingSyncOnStartup();
     // 先顯示本機資料
     migrateTasks();
     initMap();
-    render();
+
 
     // 雲端載入期間禁止編輯
     setEditingLocked(true);
@@ -1203,6 +1124,7 @@ if (!cloud) {
     
     state = cloud.trip;
     state.day = day;
+    $('tripContent').classList.remove('hidden');
 
     // 記住目前雲端版本
     cloudVersion = cloud.version;
