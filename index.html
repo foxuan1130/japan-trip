@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+    <head>
+        <meta charset="utf-8"/>
+        <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>
+        日本遊 | Japan Trip
+    </title>
+    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+    <link href="style.css" rel="stylesheet"/>
+</head>
+<body>
+    
+<!-- Japan Trip 登入視窗 -->
+<div id="loginModal" class="modal hidden">
+    <div class="dialog">
+        <h2>⛩ Japan Trip 登入</h2>
+        <p class="notice">
+            登入後即可使用雲端旅行手札
+        </p>
+
+        <form id="loginForm">
+            <label for="loginEmail">Email</label>
+            <input
+                id="loginEmail"
+                type="email"
+                autocomplete="username"
+                required
+                placeholder="請輸入 Email"
+            >
+
+            <label for="loginPassword">密碼</label>
+            <input
+                id="loginPassword"
+                type="password"
+                autocomplete="current-password"
+                required
+                placeholder="請輸入密碼"
+            >
+
+            <p id="loginStatus" class="notice"></p>
+
+            <div class="dialogfooter">
+                <button type="button" class="smallbtn" id="closeLogin">
+                    取消
+                </button>
+                <button type="submit" class="primary">
+                    登入
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<header>
+<h1>
+⛩ 日本遊
+<span style="font-size:12px;color:#bd8c87">
+    Japan Trip
+</span>
+</h1>
+
+<nav>
+<button class="active" data-tab="schedule">
+    📋 行程表
+</button>
+<button data-tab="prep">
+    🧳 行前準備
+</button>
+<button data-tab="expenses">
+    💰 旅費結算
+</button>
+<button type="button" id="loginButton" class="smallbtn">
+    🔐 登入
+</button>
+</nav>
+</header>
+<main>
+<section class="tabpage active" id="schedule">
+<div class="panel">
+    <div class="summary">
+    <div>
+    <h2 style="margin:0">
+    💰 今日結算
+    </h2>
+    <span class="sub" id="summaryDate">
+    </span>
+    </div>
+    <div class="money">
+    <span>
+    CCX 欠 Josh
+    </span>
+    <b id="ccxOwes">
+    ¥0
+    </b>
+    </div>
+    <div class="money blue">
+    <span>
+    Josh 欠 CCX
+    </span>
+    <b id="joshOwes">
+    ¥0
+    </b>
+    </div>
+    <button aria-expanded="false" class="iconbtn" id="toggleDetail" title="展開明細">
+    ⬇️ 明細
+    </button>
+    </div>
+    <div class="detail hidden" id="detail">
+    <h3>
+    當日消費明細
+    </h3>
+    <div id="detailTable">
+    </div>
+    <div class="settle" id="netSettle">
+    </div>
+    </div>
+</div>
+<div class="panel">
+    <div class="maphead">
+    <h2>
+    📍 今日旅遊路線
+    </h2>
+    <span class="sub">
+    僅顯示當日景點
+    </span>
+    </div>
+    <div id="map">
+    </div>
+    <p class="mapnote">
+    地圖標記依行程順序排列；虛線只代表景點順序，不是道路導航。點擊標記可開啟 Google Maps。
+    </p>
+</div>
+<div class="datebar">
+    <button aria-label="前一天" id="prevDay">
+    ‹
+    </button>
+    <h2 id="dayTitle">
+    </h2>
+    <button aria-label="後一天" id="nextDay">
+    ›
+    </button>
+</div>
+<div id="itinerary">
+</div>
+<div class="center">
+    <button class="primary" id="addItem">
+    ＋ 新增行程
+    </button>
+</div>
+</section>
+<section class="tabpage" id="prep">
+<div class="panel">
+
+<!-- 負責人篩選 -->
+<div class="task-filters">
+    <button type="button" class="task-filter active" data-owner="CCX">
+        CCX
+    </button>
+    <button type="button" class="task-filter" data-owner="Josh">
+        Josh
+    </button>
+</div>
+
+<!-- 完成進度 -->
+<p class="notice" id="taskProgress"></p>
+
+<!-- 待辦清單 -->
+<div id="checklist"></div>
+
+<!-- 新增待辦事項 -->
+<div class="task-add">
+    <input
+        id="newTask"
+        type="text"
+        placeholder="例如：購買旅遊保險"
+    >
+
+
+    <button type="button" class="primary" id="addTask">
+        ＋ 新增
+    </button>
+</div>
+
+
+</div>
+</section>
+<section class="tabpage" id="expenses">
+<div class="panel">
+    <h2>
+    💰 旅費結算
+    </h2>
+    <p class="notice">
+    記錄誰付款、CCX 與 Josh 各自應負擔的金額，不強制平分。
+    </p>
+    <div id="allExpenses">
+    </div>
+    <div class="center">
+    <button class="primary" id="addExpense">
+    ＋ 新增消費
+    </button>
+    </div>
+</div>
+</section>
+</main>
+<div class="modal hidden" id="modal">
+<div class="dialog">
+<h2 id="modalTitle">
+    新增行程
+</h2>
+<form id="editForm">
+    <input id="editId" type="hidden"/>
+    <label>
+    行程日期
+    </label>
+    <select id="editDate">
+    </select>
+    <div class="two">
+    <div>
+    <label>
+    時間
+    </label>
+    <input id="editTime" required="" type="time"/>
+    </div>
+    <div>
+    <label>
+    行程名稱
+    </label>
+    <input id="editName" placeholder="例如：大阪城" required=""/>
+    </div>
+    </div>
+    <label>
+    地點名稱（選填，用於地圖）
+    </label>
+    <input id="editPlace" placeholder="例如：大阪城公園"/>
+    <div class="two">
+    <div>
+    <label>
+    緯度（選填）
+    </label>
+    <input id="editLat" placeholder="34.6873" step="any" type="number"/>
+    </div>
+    <div>
+    <label>
+    經度（選填）
+    </label>
+    <input id="editLng" placeholder="135.5262" step="any" type="number"/>
+    </div>
+    </div>
+    <p class="notice">
+    新增地點時，可使用「搜尋地點座標」取得座標，或自行輸入；未設定座標的行程不會出現在地圖。
+    </p>
+    <button class="smallbtn" id="lookupPlace" type="button">
+    🔎 搜尋地點座標
+    </button>
+    <p class="notice" id="lookupStatus"></p>
+    <div id="placeResults" class="hidden"></div>
+    <label>
+    行程備註
+    </label>
+    <textarea id="editDesc" placeholder="想做的事、備註"></textarea>
+    <div class="dialogfooter">
+    <button class="smallbtn" id="cancelEdit" type="button">
+    取消
+    </button>
+    <button class="primary" type="submit">
+    儲存行程
+    </button>
+    </div>
+</form>
+</div>
+</div>
+<div class="modal hidden" id="expenseModal">
+<div class="dialog">
+<h2 id="expenseModalTitle">
+    新增消費
+</h2>
+<form id="expenseForm">
+    <input type="hidden" id="expenseEditId">
+    <label>日期</label>
+    <select id="expenseDate"></select>
+    <label>消費項目</label>
+    <input id="expenseName" placeholder="例如：晚餐" required=""/>
+    <div class="two">
+    <div>
+    <label>總金額（JPY）</label>
+    <input id="expenseTotal" min="0" required="" step="1" type="number"/>
+    </div>
+    <div>
+    <label>
+    付款人
+    </label>
+    <select id="expensePayer">
+    <option>
+        CCX
+    </option>
+    <option>
+        Josh
+    </option>
+    </select>
+    </div>
+    </div>
+    <div class="two">
+    <div>
+    <label>
+    CCX 應負擔
+    </label>
+    <input id="expenseCcx" min="0" required="" step="1" type="number"/>
+    </div>
+    <div>
+    <label>
+    Josh 應負擔
+    </label>
+    <input id="expenseJosh" min="0" required="" step="1" type="number"/>
+    </div>
+    </div>
+    <p class="notice">
+    兩人的應負擔金額加總必須等於總金額。
+    </p>
+    <div class="dialogfooter">
+    <button class="smallbtn" id="cancelExpense" type="button">
+    取消
+    </button>
+    <button class="primary" type="submit">
+    儲存消費
+    </button>
+    </div>
+</form>
+</div>
+</div>
+
+
+<!-- Leaflet 地圖功能 -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<!-- Supabase 連線設定 -->
+<script src="./js/supabase.js"></script>
+
+<!-- Japan Trip 主程式 -->
+<script src="./js/app.js"></script>
+
+</body>
+</html>

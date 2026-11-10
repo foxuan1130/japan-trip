@@ -1,0 +1,13 @@
+
+# 私人旅行備份
+JapanTrip_backup*.json
+
+# 私人環境設定與密鑰
+.env
+.env.*
+*.pem
+
+# 本機與編輯器暫存
+node_modules/
+.vscode/
+.DS_Store

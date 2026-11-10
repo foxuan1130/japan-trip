@@ -1,0 +1,546 @@
+    :root {
+        --ink:#583e3b;
+        --rose:#c97e7c;
+        --soft:#f8e7e4;
+        --bg:#fff9f6;
+        --line:#ecd7d1
+    }
+    * {
+        box-sizing:border-box
+    }
+    body {
+        margin:0;
+        background:linear-gradient(#fff5f2,#fffaf7);
+        font-family:system-ui,-apple-system,'Noto Sans TC',sans-serif;
+        color:var(--ink)
+    }
+    button,input,textarea,select {
+        font:inherit
+    }
+    button {
+        cursor:pointer
+    }
+    header {
+        background:#fff9f8;
+        border-bottom:1px solid var(--line);
+        padding:18px max(22px,calc((100vw - 1080px)/2));
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:16px;
+        flex-wrap:wrap
+    }
+    h1 {
+        font-size:30px;
+        margin:0;
+        color:#844d49
+    }
+    nav {
+        display:flex;
+        gap:7px;
+        flex-wrap:wrap
+    }
+    nav button {
+        border:0;
+        background:transparent;
+        color:var(--ink);
+        padding:12px 17px;
+        border-radius:13px
+    }
+    nav button.active {
+        background:var(--soft);
+        font-weight:700
+    }
+    main {
+        max-width:1080px;
+        margin:24px auto;
+        padding:0 18px 60px
+    }
+    .panel {
+        background:#fffdfc;
+        border:1px solid var(--line);
+        border-radius:19px;
+        box-shadow:0 4px 18px #9f5f4c12;
+        margin-bottom:18px;
+        padding:22px
+    }
+    .summary {
+        display:flex;
+        gap:16px;
+        align-items:center;
+        flex-wrap:wrap
+    }
+    .summary>div:first-child {
+        flex:1;
+        min-width:170px
+    }
+    .money {
+        flex:1;
+        min-width:180px;
+        background:#f9edeb;
+        border-radius:15px;
+        padding:14px 20px
+    }
+    .money.blue {
+        background:#edf3f7
+    }
+    .money b {
+        display:block;
+        font-size:25px;
+        margin-top:5px
+    }
+    .sub {
+        font-size:13px;
+        color:#977f79
+    }
+    .iconbtn {
+        border:1px solid var(--line);
+        background:#fff;
+        border-radius:12px;
+        padding:10px 14px;
+        color:#8f5653
+    }
+    .detail {
+        margin-top:18px;
+        border-top:1px solid var(--line);
+        padding-top:14px
+    }
+    .hidden {
+        display:none!important
+    }
+    table {
+        width:100%;
+        border-collapse:collapse;
+        font-size:14px
+    }
+    td,th {
+        padding:11px 6px;
+        border-bottom:1px solid #f2e5e1;
+        text-align:left
+    }
+    th:last-child,td:last-child {
+        text-align:right
+    }
+    .settle {
+        font-weight:700;
+        color:#aa5e59;
+        margin-top:15px
+    }
+    #map {
+        height:365px;
+        border-radius:14px;
+        z-index:0;
+        background:#eee
+    }
+    .maphead {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:12px;
+        gap:12px
+    }
+    .maphead h2 {
+        margin:0;
+        font-size:19px
+    }
+    .mapnote {
+        font-size:12px;
+        color:#927e77;
+        margin:10px 0 0
+    }
+    .datebar {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:30px;
+        margin:22px 0 18px
+    }
+    .datebar h2 {
+        margin:0;
+        font-size:23px;
+        text-align:center
+    }
+    .datebar button {
+        border:1px solid #e4b5b0;
+        border-radius:50%;
+        width:44px;
+        height:44px;
+        background:#fff8f6;
+        font-size:26px;
+        color:#a35f5b
+    }
+    .datebar button:disabled {
+        opacity:.3;
+        cursor:default
+    }
+    .item {
+        display:flex;
+        gap:12px;
+        align-items:center;
+        background:#fffdfc;
+        border:1px solid var(--line);
+        border-radius:15px;
+        padding:15px;
+        margin-bottom:12px
+    }
+    .item.dragging {
+        opacity:.45
+    }
+    .grip {
+        cursor:grab;
+        touch-action:none;
+        color:#ad9690;
+        font-size:24px;
+        padding:10px
+    }
+    .itemmain {
+        flex:1;
+        min-width:0
+    }
+    .itemtop {
+        display:flex;
+        align-items:baseline;
+        gap:15px;
+        flex-wrap:wrap
+    }
+    .itemtop strong {
+        font-size:18px
+    }
+    .desc {
+        color:#8d7872;
+        font-size:14px;
+        margin-top:4px;
+        white-space:pre-wrap
+    }
+    .cost {
+        font-size:13px;
+        background:#fbefeb;
+        border-radius:12px;
+        padding:8px 10px;
+        white-space:nowrap
+    }
+    .actions {
+        display:flex;
+        gap:5px
+    }
+    .actions button {
+        background:transparent;
+        border:0;
+        color:#9b6660;
+        padding:8px;
+        font-size:17px
+    }
+    .primary {
+        border:0;
+        background:linear-gradient(130deg,#e7aaa5,#c97e7c);
+        color:white;
+        padding:13px 27px;
+        border-radius:25px;
+        font-weight:700
+    }
+    .center {
+        text-align:center;
+        margin:22px
+    }
+    .empty {
+        text-align:center;
+        color:#9a8580;
+        padding:22px
+    }
+    .pin {
+        border-radius:50%;
+        background:#c77d78;
+        border:2px solid white;
+        color:white;
+        width:29px;
+        height:29px;
+        display:grid;
+        place-items:center;
+        box-shadow:0 1px 6px #0004;
+        font-weight:bold
+    }
+    .leaflet-div-icon {
+        background:transparent;
+        border:0
+    }
+    .modal {
+        position:fixed;
+        inset:0;
+        background:#30211d99;
+        display:grid;
+        place-items:center;
+        padding:18px;
+        z-index:2000
+    }
+    .dialog {
+        background:#fffaf8;
+        border-radius:20px;
+        padding:24px;
+        width:min(530px,100%);
+        max-height:92vh;
+        overflow:auto
+    }
+    .dialog h2 {
+        margin:0 0 18px
+    }
+    label {
+        display:block;
+        font-size:14px;
+        margin:13px 0 5px
+    }
+    input,textarea,select {
+        width:100%;
+        padding:11px;
+        border:1px solid #e4cbc4;
+        border-radius:10px;
+        background:white;
+        color:#513c39
+    }
+    textarea {
+        min-height:70px;
+        resize:vertical
+    }
+    .two {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:12px
+    }
+    .dialogfooter {
+        display:flex;
+        justify-content:flex-end;
+        gap:10px;
+        margin-top:20px
+    }
+    .notice {
+        font-size:13px;
+        color:#947b75
+    }
+    .tabpage {
+        display:none
+    }
+    .tabpage.active {
+        display:block
+    }
+    .checkline {
+        display:flex;
+        align-items:center;
+        gap:10px;
+        padding:9px;
+        border-bottom:1px solid var(--line)
+    }
+    .checkline input {
+        width:auto
+    }
+    .smallbtn {
+        border:1px solid var(--line);
+        background:white;
+        border-radius:10px;
+        padding:8px 12px;
+        color:#945b55
+    }
+@media(max-width:480px) {
+    header {
+        padding:15px
+    }
+    h1 {
+        font-size:25px
+    }
+    nav {
+        width:100%;
+        justify-content:space-between
+    }
+    nav button {
+        padding:10px 7px;
+        font-size:13px
+    }
+    .panel {
+        padding:15px
+    }
+    .summary {
+        gap:9px
+    }
+    .money {
+        min-width:125px;
+        padding:12px
+    }
+    .money b {
+        font-size:21px
+    }
+    #map {
+        height:300px
+    }
+    .datebar {
+        gap:12px
+    }
+    .datebar h2 {
+        font-size:19px
+    }
+    .item {
+        gap:5px;
+        padding:11px
+    }
+    .grip {
+        padding:5px
+    }
+    .cost {
+        padding:6px;
+        font-size:11px
+    }
+    .itemtop strong {
+        font-size:15px
+    }
+    .itemtop {
+        gap:7px
+    }
+    .actions {
+        flex-direction:column
+    }
+    .two {
+        grid-template-columns:1fr 1fr
+    }
+}
+/* 地點搜尋結果 */
+#placeResults {
+    margin-top: 12px;
+    max-height: 260px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+}
+
+.place-option {
+    display: block;
+    width: 100%;
+    padding: 12px 14px;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: white;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.place-option:last-child {
+    border-bottom: none;
+}
+
+.place-option:hover {
+    background: var(--soft);
+}
+/* 行前準備：新增任務 */
+.task-add {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.task-add input {
+    flex: 1;
+    min-width: 0;
+}
+
+.task-add .primary {
+    white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+    .task-add {
+        flex-wrap: wrap;
+    }
+
+    .task-add .primary {
+        width: 100%;
+    }
+}
+
+/* =========================
+   行前準備｜CCX / Josh 切換
+========================= */
+
+.task-filters {
+    display: flex;
+    gap: 0;
+    width: 100%;
+    max-width: none;
+    padding: 5px;
+    margin: 18px 0 16px;
+    background: #f8e7e4;
+    border-radius: 16px;
+}
+
+
+.task-filter {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 11px 24px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: #977f79;
+    font-size: 15px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.task-filter:hover {
+    color: #a65e5b;
+    background: #ffffff80;
+}
+
+/* 目前選擇的分頁 */
+.task-filter.active {
+    background: #fffdfc;
+    color: #a65e5b;
+    font-weight: 700;
+    box-shadow: 0 2px 8px #9f5f4c20;
+}
+
+/* 完成進度 */
+#taskProgress {
+    margin: 12px 0 18px;
+    color: #977f79;
+    font-size: 14px;
+}
+
+/* 新增任務區 */
+.task-add {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.task-add input {
+    flex: 1;
+    min-width: 0;
+}
+
+.task-add .primary {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* 手機版 */
+@media (max-width: 480px) {
+    .task-filters {
+        width: 100%;
+    }
+
+    .task-filter {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .task-add {
+        flex-wrap: wrap;
+    }
+
+    .task-add .primary {
+        width: 100%;
+    }
+}
