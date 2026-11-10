@@ -582,3 +582,10 @@
         flex-wrap: wrap;
     }
 }
+/* 行前準備：垃圾桶按鈕移除外框 */
+#checklist [data-taskdel] {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 6px;
+}
