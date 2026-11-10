@@ -1166,7 +1166,12 @@ if (!cloud) {
     state = cloud.trip;
     state.day = day;
     $('tripContent').classList.remove('hidden');
-
+    requestAnimationFrame(() => {
+    if (map) {
+        map.invalidateSize();
+        renderMap();
+        }
+    });
     // 記住目前雲端版本
     cloudVersion = cloud.version;
 
