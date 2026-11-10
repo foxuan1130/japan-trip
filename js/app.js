@@ -329,10 +329,11 @@ function initMap() {
     }).addTo(map);
     layer = L.layerGroup().addTo(map);
 }
-
+const markersById = new Map();
 function renderMap() {
     if (!map || !layer) return;
     layer.clearLayers();
+    markersById.clear();
     const points = dayItems().filter(item =>
         item.lat !== '' && item.lat != null && item.lng !== '' && item.lng != null &&
         Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng)) &&
@@ -357,6 +358,7 @@ function renderMap() {
         link.textContent = '開啟 Google Maps ↗';
         popup.append(label, link);
         marker.bindPopup(popup);
+        markersById.set(String(item.id), marker);
     });
     if (points.length > 1) {
         L.polyline(points.map(item => [Number(item.lat), Number(item.lng)]), {
@@ -437,6 +439,45 @@ function renderItems() {
 });
 
         };
+    });
+        // 點擊行程卡片，地圖自動定位到該景點
+    document.querySelectorAll('.item').forEach(element => {
+        element.addEventListener('click', event => {
+            // 點擊編輯、刪除按鈕時不觸發定位
+            if (event.target.closest('button')) return;
+
+            const item = state.items.find(item => item.id === element.dataset.id);
+            if (!item) return;
+
+            const lat = Number(item.lat);
+            const lng = Number(item.lng);
+
+
+            // 沒有有效座標就不定位
+            if (item.lat === '' || item.lng === '' ||
+                !Number.isFinite(lat) || !Number.isFinite(lng) ||
+                Math.abs(lat) > 90 || Math.abs(lng) > 180) return;
+
+            // 滾動到地圖
+            $('map').scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
+            // 地圖移動並放大
+            if (map) {
+                map.invalidateSize();
+                map.flyTo([lat, lng], 16, {
+                    duration: 1.2
+                });
+                const marker = markersById.get(String(item.id));
+                if (marker) {
+                    map.once('moveend', () => {
+                        marker.openPopup();
+                    });
+                }
+            }
+        });
     });
     enableTouchSort();
 }
