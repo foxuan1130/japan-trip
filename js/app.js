@@ -730,7 +730,7 @@ function renderTasks() {
                     class="smallbtn"
                     data-taskdel="${esc(task.id)}"
                 >
-                    🗑️
+                    刪除
                 </button>
             </div>
         `).join('')
