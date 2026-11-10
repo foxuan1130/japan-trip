@@ -431,33 +431,6 @@
 .place-option:hover {
     background: var(--soft);
 }
-/* 行前準備：新增任務 */
-.task-add {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 16px;
-}
-
-.task-add input {
-    flex: 1;
-    min-width: 0;
-}
-
-.task-add .primary {
-    white-space: nowrap;
-}
-
-@media (max-width: 480px) {
-    .task-add {
-        flex-wrap: wrap;
-    }
-
-    .task-add .primary {
-        width: 100%;
-    }
-}
-
 /* =========================
    行前準備｜CCX / Josh 切換
 ========================= */
@@ -527,15 +500,6 @@
 
 /* 手機版 */
 @media (max-width: 480px) {
-    .task-filters {
-        width: 100%;
-    }
-
-    .task-filter {
-        flex: 1;
-        min-width: 0;
-    }
-
     .task-add {
         flex-wrap: wrap;
     }
@@ -588,4 +552,145 @@
     background: transparent;
     box-shadow: none;
     padding: 6px;
+}
+
+/* ===== 旅費結算：電腦表格 / 手機卡片 ===== */
+.expenses-desktop {
+    display: block;
+}
+
+.expenses-mobile {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .expenses-desktop {
+        display: none;
+    }
+
+    .expenses-mobile {
+        display: grid;
+        gap: 14px;
+    }
+
+    .expense-card {
+        background: #fff;
+        border: 1px solid #ead4ce;
+        border-radius: 18px;
+        padding: 16px;
+    }
+
+    /* 日期左上、付款人右上；金額與按鈕橫跨整張卡片 */
+    .expense-card-top {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        column-gap: 10px;
+    }
+
+    /* 配合 app.js 中的 expense-card-info 包裝層 */
+    .expense-card-info {
+        display: contents;
+    }
+
+    .expense-card-date {
+        grid-column: 1;
+        grid-row: 1;
+        color: #927e78;
+        font-size: 14px;
+        overflow-wrap: anywhere;
+        min-width: 0;
+    }
+
+    .expense-card-payer {
+        grid-column: 2;
+        grid-row: 1;
+        color: #927e78;
+        font-size: 12px;
+        white-space: nowrap;
+        margin: 0;
+    }
+
+    .expense-card-total-row {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-width: 0;
+        margin-top: 6px;
+    }
+
+    .expense-card-total {
+        color: #61443f;
+        font-size: 25px;
+        font-weight: 700;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .expense-card-actions {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        gap: 4px;
+        margin-left: auto;
+    }
+
+    .expense-card-actions .smallbtn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 5px;
+        border: none;
+        background: transparent;
+        box-shadow: none;
+        white-space: nowrap;
+    }
+
+    .expense-card-split {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #f0e2de;
+    }
+
+    .expense-card-split > div {
+        min-width: 0;
+        padding: 12px;
+        background: #f9edeb;
+        border-radius: 12px;
+    }
+
+    .expense-card-split > div:nth-child(2) {
+        background: #eaf1f5;
+    }
+
+    .expense-card-split span {
+        display: block;
+        color: #927e78;
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .expense-card-split strong {
+        color: #61443f;
+        font-size: 18px;
+        overflow-wrap: anywhere;
+    }
+    main {
+        width: 100%;
+        min-width: 0;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    .panel {
+        min-width: 0;
+        max-width: 100%;
+    }
 }

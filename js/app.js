@@ -403,7 +403,7 @@ function renderItems() {
             </div>
             <div class="actions">
                 <button type="button" data-edit="${esc(item.id)}" title="編輯"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil preview-icon"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></button>
-                <button type="button" data-del="${esc(item.id)}" title="刪除"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x preview-icon"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+                <button type="button" data-del="${esc(item.id)}" title="刪除"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash preview-icon"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
             </div>
         </div>
     `).join('') : '<div class="panel empty">這天還沒有行程，按下方按鈕新增吧！</div>';
@@ -536,13 +536,16 @@ function enableTouchSort() {
 }
 
 
+
 function renderExpenses() {
     const expenses = [...state.expenses].sort(
         (a, b) => dates.indexOf(a.date) - dates.indexOf(b.date)
     );
 
     $('allExpenses').innerHTML = expenses.length
-        ? `<div style="overflow:auto">
+        ? `
+        <!-- 電腦版：保留表格 -->
+        <div class="expenses-desktop" style="overflow:auto">
             <table>
                 <thead>
                     <tr>
@@ -566,19 +569,58 @@ function renderExpenses() {
                             <td>${yen(x.josh)}</td>
                             <td>
                                 <button type="button" class="smallbtn"
-                                    data-exedit="${esc(x.id)}">
-                                    編輯
-                                </button>
+                                    data-exedit="${esc(x.id)}">編輯</button>
                                 <button type="button" class="smallbtn"
-                                    data-exdel="${esc(x.id)}">
-                                    刪除
-                                </button>
+                                    data-exdel="${esc(x.id)}">刪除</button>
                             </td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
-        </div>`
+        </div>
+
+        <!-- 手機版：消費卡片 -->
+        <div class="expenses-mobile">
+            ${expenses.map(x => `
+                <div class="expense-card">
+                    <div class="expense-card-top">
+                        <div class="expense-card-info">
+                            <div class="expense-card-date">
+                                ${esc(x.date)} · ${esc(x.name)}
+                            </div>
+                            <div class="expense-card-total-row">
+                            <div class="expense-card-total">
+                                ${yen(x.total)}
+                            </div>
+                                <div class="expense-card-actions">
+                                <button type="button" class="smallbtn"
+                                    data-exedit="${esc(x.id)}"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil preview-icon"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></button>
+                                <button type="button" class="smallbtn"
+                                    data-exdel="${esc(x.id)}"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash preview-icon"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                            </div>
+                            </div>
+                        </div>
+                        <div class="expense-card-payer">
+                            付款人：${esc(x.payer)}
+                        </div>
+                    </div>
+
+                    <div class="expense-card-split">
+                        <div>
+                            <span>CCX 負擔</span>
+                            <strong>${yen(x.ccx)}</strong>
+                        </div>
+                        <div>
+                            <span>Josh 負擔</span>
+                            <strong>${yen(x.josh)}</strong>
+                        </div>
+                    </div>
+
+                    
+                </div>
+            `).join('')}
+        </div>
+        `
         : '<p class="empty">還沒有消費紀錄</p>';
 
     // 編輯消費
@@ -603,10 +645,10 @@ function renderExpenses() {
                 console.error('❌ 刪除旅費同步失敗：', error);
                 alert('刪除旅費尚未成功同步，請先不要重新整理網頁。');
             });
-
         };
     });
 }
+
 
 function editExpense(id) {
     const expense = state.expenses.find(
