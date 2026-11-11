@@ -1067,13 +1067,37 @@ $('toggleDetail').onclick = () => {
     $('toggleDetail').setAttribute('aria-expanded', String(isOpen));
 };
 
+
+function switchTab(tabId) {
+    document.querySelectorAll('nav button[data-tab]').forEach(button => {
+        button.classList.toggle('active', button.dataset.tab === tabId);
+    });
+
+    document.querySelectorAll('.tabpage').forEach(page => {
+        page.classList.toggle('active', page.id === tabId);
+    });
+
+    // 記住目前頁面
+    localStorage.setItem('japan_trip_active_tab', tabId);
+
+    // 切回行程表時重新調整地圖
+    if (tabId === 'schedule' && map) {
+        setTimeout(() => map.invalidateSize(), 100);
+    }
+}
+
+// 點擊導覽列切換頁面
 document.querySelectorAll('nav button[data-tab]').forEach(button => {
-    button.onclick = () => {
-        document.querySelectorAll('nav button[data-tab]').forEach(x => x.classList.toggle('active', x === button));
-        document.querySelectorAll('.tabpage').forEach(x => x.classList.toggle('active', x.id === button.dataset.tab));
-        if (button.dataset.tab === 'schedule' && map) setTimeout(() => map.invalidateSize(), 100);
-    };
+    button.onclick = () => switchTab(button.dataset.tab);
 });
+
+// 重新整理後恢復上次頁面
+const savedTab = localStorage.getItem('japan_trip_active_tab');
+const validTabs = [...document.querySelectorAll('nav button[data-tab]')]
+    .map(button => button.dataset.tab);
+
+switchTab(validTabs.includes(savedTab) ? savedTab : 'schedule');
+
 
 $('addItem').onclick = () => openItem();
 $('cancelEdit').onclick = () => $('modal').classList.add('hidden');
