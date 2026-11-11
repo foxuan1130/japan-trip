@@ -176,7 +176,35 @@ function checkPendingSyncOnStartup() {
         return true;
     }
 }
+// 比較資料內容，忽略物件欄位順序
+function isSameData(a, b) {
+    if (a === b) return true;
 
+    if (a === null || b === null ||
+        typeof a !== 'object' || typeof b !== 'object') {
+        return false;
+    }
+
+    if (Array.isArray(a) !== Array.isArray(b)) {
+        return false;
+    }
+
+    if (Array.isArray(a)) {
+        return a.length === b.length &&
+            a.every((value, index) =>
+                isSameData(value, b[index])
+            );
+    }
+
+    const keysA = Object.keys(a).sort();
+    const keysB = Object.keys(b).sort();
+
+    return keysA.length === keysB.length &&
+        keysA.every((key, index) =>
+            key === keysB[index] &&
+            isSameData(a[key], b[key])
+        );
+}
 // 三方合併：原始資料、本機資料、最新雲端資料
 function mergeTripData(base, local, remote) {
     const merged = {};
@@ -207,14 +235,12 @@ function mergeTripData(base, local, remote) {
             const mine = localMap.get(id);
             const theirs = remoteMap.get(id);
 
-            const changedLocally =
-                JSON.stringify(before) !== JSON.stringify(mine);
+            const changedLocally = !isSameData(before, mine);
 
-            const changedRemotely =
-                JSON.stringify(before) !== JSON.stringify(theirs);
+            const changedRemotely = !isSameData(before, theirs);
 
             if (changedLocally && changedRemotely) {
-                if (JSON.stringify(mine) !== JSON.stringify(theirs)) {
+                if (!isSameData(mine, theirs)) {
                     throw new Error(
                         `資料衝突：${type} 中的 ${id} 被雙方同時修改`
                     );
