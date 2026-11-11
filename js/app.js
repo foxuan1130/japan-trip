@@ -83,10 +83,12 @@ let cloudReady = false;
 
 let cloudVersion = null;
 
-
+// 記錄目前雲端版本對應的原始資料
+let cloudBaseState = null;
 
 let cloudSaveQueue = Promise.resolve();
-
+// 記錄本機修改次數，判斷同步期間是否又有新操作
+let cloudChangeRevision = 0;
 
 let cloudSyncBlocked = false;
 
@@ -175,59 +177,102 @@ function checkPendingSyncOnStartup() {
     }
 }
 
+// 三方合併：原始資料、本機資料、最新雲端資料
+function mergeTripData(base, local, remote) {
+    const merged = {};
 
-function queueCloudSave() {
-    if (!cloudReady || cloudSyncBlocked) {
-        console.warn('⚠️ 雲端尚未準備完成，或同步已暫停');
-        return Promise.reject(new Error('雲端同步目前不可用'));
+    for (const type of ['items', 'expenses', 'tasks']) {
+        const original = new Map(
+            (base[type] || []).map(x => [String(x.id), x])
+        );
+
+        const localMap = new Map(
+            (local[type] || []).map(x => [String(x.id), x])
+        );
+
+        const remoteMap = new Map(
+            (remote[type] || []).map(x => [String(x.id), x])
+        );
+
+        const ids = new Set([
+            ...original.keys(),
+            ...localMap.keys(),
+            ...remoteMap.keys()
+        ]);
+
+        const result = [];
+
+        for (const id of ids) {
+            const before = original.get(id);
+            const mine = localMap.get(id);
+            const theirs = remoteMap.get(id);
+
+            const changedLocally =
+                JSON.stringify(before) !== JSON.stringify(mine);
+
+            const changedRemotely =
+                JSON.stringify(before) !== JSON.stringify(theirs);
+
+            if (changedLocally && changedRemotely) {
+                if (JSON.stringify(mine) !== JSON.stringify(theirs)) {
+                    throw new Error(
+                        `資料衝突：${type} 中的 ${id} 被雙方同時修改`
+                    );
+                }
+            }
+
+            const chosen = changedLocally ? mine : theirs;
+
+            if (chosen !== undefined) {
+                result.push(chosen);
+            }
+        }
+
+        merged[type] = result;
     }
 
-
-const snapshot = structuredClone(state);
-
-// 每個人自行保留目前瀏覽日期
-delete snapshot.day;
-
-// 雲端寫入前，先備份待同步資料
-if (!backupPendingSync(snapshot, cloudVersion)) {
-    cloudSyncBlocked = true;
-    cloudReady = false;
-    setEditingLocked(true);
-
-    return Promise.reject(
-        new Error('本機備份失敗，已停止雲端同步')
-    );
+    return merged;
 }
+// 等待指定毫秒數
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+// 發生版本衝突時，重新讀取並安全合併
+async function retryVersionConflict(snapshot, baseSnapshot) {
+    const client = window.supabaseClient;
 
-cloudSaveQueue = cloudSaveQueue
+    if (!baseSnapshot) {
+        throw new Error('缺少原始版本，無法安全合併');
+    }
 
-        .catch(() => {
-            // 清除上一筆佇列的失敗狀態
-            // 不會解除 cloudSyncBlocked 的保護
-        })
+    // 最多重試 3 次
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        console.warn(`⚠️ 版本衝突，3 秒後進行第 ${attempt} 次重試`);
 
-        .then(async () => {
-        // 如果之前同步失敗，禁止繼續寫入
-        if (cloudSyncBlocked) {
-            throw new Error('雲端同步已暫停');
+        await sleep(3000);
+
+        // 取得最新雲端資料與版本
+        const cloud = await loadCloudData();
+
+        if (!cloud) {
+            throw new Error('無法取得最新雲端資料');
         }
 
-        const client = window.supabaseClient;
+        // 使用三方合併，避免覆蓋另一人的修改
+        const merged = mergeTripData(
+            baseSnapshot,
+            snapshot,
+            cloud.trip
+        );
 
-
-        const { data: sessionData, error: sessionError } =
-            await client.auth.getSession();
-
-        if (sessionError || !sessionData.session) {
-            throw new Error('尚未登入 Supabase');
-        }
+        // 保留較新的本機待同步資料，不直接覆蓋備份
+        // 合併結果先保存在 merged，等待雲端確認成功
+        console.log('☁️ 已完成安全合併，準備嘗試同步');
 
         const { data, error } = await client.rpc(
             'update_trip_safely',
             {
                 p_trip_id: 'japan-trip',
-                p_expected_version: cloudVersion,
-                p_new_data: snapshot
+                p_expected_version: cloud.version,
+                p_new_data: merged
             }
         );
 
@@ -235,69 +280,178 @@ cloudSaveQueue = cloudSaveQueue
 
         const result = data?.[0];
 
-        if (!result?.update_success) {
-            throw new Error('版本衝突：雲端資料已被其他裝置修改');
+        if (result?.update_success) {
+            return {
+                merged,
+                version: Number(result.new_version)
+            };
         }
+    }
+
+    throw new Error('版本衝突重試 3 次仍未成功');
+}
 
 
-        cloudVersion = Number(result.new_version);
+function queueCloudSave() {
+    if (!cloudReady || cloudSyncBlocked) {
+        return Promise.reject(
+            new Error('雲端同步目前不可用')
+        );
+    }
 
-        // 只有確認雲端更新成功後，才清除對應的待同步備份
-        clearPendingSyncIfMatched(snapshot);
+    // 每次編輯都增加修改版本
+    cloudChangeRevision++;
 
-        console.log('☁️ 安全同步成功，版本：', cloudVersion);
+    // 立即備份最新資料
+    const pendingSnapshot = structuredClone(state);
+    delete pendingSnapshot.day;
 
-    }).catch(error => {
+    if (!backupPendingSync(pendingSnapshot, cloudVersion)) {
         cloudSyncBlocked = true;
         cloudReady = false;
         setEditingLocked(true);
 
-        console.error('❌ 雲端同步已暫停：', error.message);
+        return Promise.reject(
+            new Error('本機備份失敗，已停止雲端同步')
+        );
+    }
 
-        throw error;
-    });
+    cloudSaveQueue = cloudSaveQueue
+        .catch(() => {
+            // 保留佇列，但不解除同步鎖定
+        })
+        .then(async () => {
+            if (cloudSyncBlocked) {
+                throw new Error('雲端同步已暫停');
+            }
+
+            const client = window.supabaseClient;
+
+            const { data: sessionData, error: sessionError } =
+                await client.auth.getSession();
+
+            if (sessionError || !sessionData.session) {
+                throw new Error('尚未登入 Supabase');
+            }
+
+            // 若同步期間再次編輯，繼續處理最新資料
+            while (true) {
+                if (cloudSyncBlocked) {
+                    throw new Error('雲端同步已暫停');
+                }
+
+                const startingRevision = cloudChangeRevision;
+
+                const snapshot = structuredClone(state);
+                delete snapshot.day;
+
+                const baseSnapshot = structuredClone(cloudBaseState);
+
+                // 每次上傳前確認有完整備份
+                if (!backupPendingSync(snapshot, cloudVersion)) {
+                    throw new Error('待同步資料備份失敗');
+                }
+
+                const { data, error } = await client.rpc(
+                    'update_trip_safely',
+                    {
+                        p_trip_id: 'japan-trip',
+                        p_expected_version: cloudVersion,
+                        p_new_data: snapshot
+                    }
+                );
+
+                if (error) throw error;
+
+                const result = data?.[0];
+
+                let savedSnapshot = snapshot;
+                let savedVersion;
+
+                if (!result?.update_success) {
+                    console.warn('⚠️ 版本衝突，開始安全合併');
+
+                    const retryResult = await retryVersionConflict(
+                        snapshot,
+                        baseSnapshot
+                    );
+
+                    savedSnapshot = retryResult.merged;
+                    savedVersion = retryResult.version;
+                } else {
+                    savedVersion = Number(result.new_version);
+                }
+
+                // 雲端成功寫入後更新基準
+                cloudVersion = savedVersion;
+                cloudBaseState = structuredClone(savedSnapshot);
+
+                // 合併同步期間新增的本機修改
+                const latestSnapshot = structuredClone(state);
+                delete latestSnapshot.day;
+
+                const updatedState = mergeTripData(
+                    snapshot,
+                    latestSnapshot,
+                    savedSnapshot
+                );
+
+                state = {
+                    ...updatedState,
+                    day
+                };
+
+                save();
+                render();
+
+                // 檢查同步期間是否發生新的編輯
+                const changedDuringSync =
+                    cloudChangeRevision !== startingRevision;
+
+                const currentSnapshot = structuredClone(state);
+                delete currentSnapshot.day;
+
+                if (!changedDuringSync &&
+                    JSON.stringify(currentSnapshot) ===
+                    JSON.stringify(savedSnapshot)) {
+
+                    // 確認沒有新修改，才能清除對應備份
+                    clearPendingSyncIfMatched(snapshot);
+
+                    console.log(
+                        '☁️ 所有修改已安全同步，版本：',
+                        cloudVersion
+                    );
+
+                    break;
+                }
+
+                // 有新修改，保留完整資料並再次同步
+                console.log('🔄 同步期間有新修改，繼續同步');
+
+                if (!backupPendingSync(
+                    currentSnapshot,
+                    cloudVersion
+                )) {
+                    throw new Error('最新資料備份失敗');
+                }
+            }
+        })
+        .catch(error => {
+            cloudSyncBlocked = true;
+            cloudReady = false;
+            setEditingLocked(true);
+
+            console.error(
+                '❌ 雲端同步已暫停：',
+                error.message
+            );
+
+            throw error;
+        });
 
     return cloudSaveQueue;
 }
-
-
-
-async function saveCloudData() {
-    if (!cloudReady) {
-        console.warn('⚠️ 雲端尚未準備完成，取消寫入');
-        return;
-    }
-
-    const client = window.supabaseClient;
-
-    if (!client) {
-        console.error('❌ Supabase 尚未初始化');
-        return;
-    }
-
-    const { data: sessionData, error: sessionError } =
-        await client.auth.getSession();
-
-    if (sessionError || !sessionData.session) {
-        console.warn('🔐 尚未登入，取消雲端寫入');
-        return;
-    }
-
-    const { error } = await client
-        .from('trip_data')
-        .update({
-            data: structuredClone(state)
-        })
-        .eq('id', 'japan-trip');
-
-    if (error) {
-        console.error('❌ 雲端儲存失敗：', error.message);
-        return;
-    }
-
-    console.log('☁️ Japan Trip 雲端儲存成功');
-}
-
 
 function dayItems() {
     return state.items
@@ -1215,7 +1369,10 @@ if (!cloud) {
         }
     });
     // 記住目前雲端版本
+    // 記住目前雲端版本與對應的原始資料
     cloudVersion = cloud.version;
+    cloudBaseState = structuredClone(cloud.trip);
+    delete cloudBaseState.day;
 
     render();
 
