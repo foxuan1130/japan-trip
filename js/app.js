@@ -1,4 +1,3 @@
-
 const KEY = 'japan_trip_v1_1';
 const dates = ['12/28', '12/29', '12/30', '12/31', '01/01', '01/02', '01/03', '01/04', '01/05', '01/06', '01/07'];
 const seed = {
@@ -122,22 +121,19 @@ function clearPendingSyncIfMatched(snapshot) {
     try {
         const raw = localStorage.getItem(PENDING_SYNC_KEY);
 
-        if (!raw) return true;
+        if (!raw) return;
 
         const backup = JSON.parse(raw);
 
-        if (isSameData(backup.data, snapshot)) {
+        // 只有備份內容與剛同步成功的資料一致，才允許清除
+        if (JSON.stringify(backup.data) === JSON.stringify(snapshot)) {
             localStorage.removeItem(PENDING_SYNC_KEY);
             console.log('✅ 已清除成功同步的本機備份');
-            return true;
+        } else {
+            console.log('📦 保留較新的待同步備份');
         }
-
-        console.warn('📦 備份與已同步資料不同，暫時保留');
-        return false;
-
     } catch (error) {
         console.error('❌ 檢查待同步備份失敗：', error);
-        return false;
     }
 }
 
@@ -321,7 +317,6 @@ async function retryVersionConflict(snapshot, baseSnapshot) {
 }
 
 
-
 function queueCloudSave() {
     if (!cloudReady || cloudSyncBlocked) {
         return Promise.reject(
@@ -329,8 +324,10 @@ function queueCloudSave() {
         );
     }
 
+    // 每次編輯都增加修改版本
     cloudChangeRevision++;
 
+    // 立即備份最新資料
     const pendingSnapshot = structuredClone(state);
     delete pendingSnapshot.day;
 
@@ -345,7 +342,9 @@ function queueCloudSave() {
     }
 
     cloudSaveQueue = cloudSaveQueue
-        .catch(() => {})
+        .catch(() => {
+            // 保留佇列，但不解除同步鎖定
+        })
         .then(async () => {
             if (cloudSyncBlocked) {
                 throw new Error('雲端同步已暫停');
@@ -360,6 +359,7 @@ function queueCloudSave() {
                 throw new Error('尚未登入 Supabase');
             }
 
+            // 若同步期間再次編輯，繼續處理最新資料
             while (true) {
                 if (cloudSyncBlocked) {
                     throw new Error('雲端同步已暫停');
@@ -372,16 +372,10 @@ function queueCloudSave() {
 
                 const baseSnapshot = structuredClone(cloudBaseState);
 
+                // 每次上傳前確認有完整備份
                 if (!backupPendingSync(snapshot, cloudVersion)) {
                     throw new Error('待同步資料備份失敗');
                 }
-
-                // 記住本次同步所建立的備份 ID
-                const currentBackup = JSON.parse(
-                    localStorage.getItem(PENDING_SYNC_KEY)
-                );
-
-                const syncingBackupId = currentBackup.backupId;
 
                 const { data, error } = await client.rpc(
                     'update_trip_safely',
@@ -413,13 +407,11 @@ function queueCloudSave() {
                     savedVersion = Number(result.new_version);
                 }
 
-                if (!Number.isSafeInteger(savedVersion)) {
-                    throw new Error('雲端版本無效');
-                }
-
+                // 雲端成功寫入後更新基準
                 cloudVersion = savedVersion;
                 cloudBaseState = structuredClone(savedSnapshot);
 
+                // 合併同步期間新增的本機修改
                 const latestSnapshot = structuredClone(state);
                 delete latestSnapshot.day;
 
@@ -437,72 +429,30 @@ function queueCloudSave() {
                 save();
                 render();
 
+                // 檢查同步期間是否發生新的編輯
                 const changedDuringSync =
                     cloudChangeRevision !== startingRevision;
 
                 const currentSnapshot = structuredClone(state);
                 delete currentSnapshot.day;
 
-                if (
-                    !changedDuringSync &&
-                    isSameData(currentSnapshot, savedSnapshot)
-                ) {
-                    // 只在備份仍是這次同步的資料時清除。
-                    // 若合併前後不同，先確認備份是否為
-                    // 本次已成功上傳的 snapshot。
-                    const raw = localStorage.getItem(
-                        PENDING_SYNC_KEY
+                if (!changedDuringSync &&
+                    JSON.stringify(currentSnapshot) ===
+                    JSON.stringify(savedSnapshot)) {
+
+                    // 確認沒有新修改，才能清除對應備份
+                    clearPendingSyncIfMatched(snapshot);
+
+                    console.log(
+                        '☁️ 所有修改已安全同步，版本：',
+                        cloudVersion
                     );
 
-                    if (!raw) {
-                        console.log(
-                            '☁️ 同步完成，版本：',
-                            cloudVersion
-                        );
-                        break;
-                    }
-
-                    const backup = JSON.parse(raw);
-
-                        if (
-                            backup.backupId === syncingBackupId &&
-                            (
-                                isSameData(backup.data, snapshot) ||
-                                isSameData(backup.data, savedSnapshot)
-                            )
-                        ) {
-                        // 備份可能是合併前的 snapshot；
-                        // 本次 snapshot 已包含在成功合併結果中。
-                        localStorage.removeItem(PENDING_SYNC_KEY);
-
-                        if (
-                            localStorage.getItem(PENDING_SYNC_KEY) !== null
-                        ) {
-                            throw new Error('無法清除已同步備份');
-                        }
-
-                        console.log(
-                            '✅ 已確認同步並清除本機待同步備份'
-                        );
-                        console.log(
-                            '☁️ 所有修改已安全同步，版本：',
-                            cloudVersion
-                        );
-                        break;
-                    }
-
-                    // 備份可能包含更新的本機修改；
-                    // 不直接刪除，而是繼續同步。
-                    console.warn(
-                        '📦 備份與本次同步資料不同，保留並檢查'
-                    );
-
-                    throw new Error(
-                        '待同步備份與目前資料不一致，已保留備份'
-                    );
+                    break;
                 }
 
-                console.log('🔄 有新修改，繼續同步');
+                // 有新修改，保留完整資料並再次同步
+                console.log('🔄 同步期間有新修改，繼續同步');
 
                 if (!backupPendingSync(
                     currentSnapshot,
@@ -527,7 +477,6 @@ function queueCloudSave() {
 
     return cloudSaveQueue;
 }
-
 
 function dayItems() {
     return state.items
