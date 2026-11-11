@@ -1169,12 +1169,13 @@ $('lookupPlace').onclick = async () => {
         url.searchParams.set('format', 'jsonv2');
         url.searchParams.set('q', query);
         url.searchParams.set('limit', '5');
+        url.searchParams.set('countrycodes', 'jp,tw');
         
         url.searchParams.set('addressdetails', '1');
 
         const response = await fetch(url.toString(), {
             headers: {
-                'Accept-Language': 'zh-TW'
+                'Accept-Language': 'zh-TW,ja,en'
             }
         });
 
