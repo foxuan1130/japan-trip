@@ -478,19 +478,42 @@ function queueCloudSave() {
     return cloudSaveQueue;
 }
 
-function dayItems() {
-    return state.items
-        .filter(item => item.date === dates[day])
-        .sort((a, b) => {
-            // 沒有時間的行程排在最後
-            if (!a.time && !b.time) return 0;
-            if (!a.time) return 1;
-            if (!b.time) return -1;
 
-            // HH:MM 格式可以直接比較
-            return a.time.localeCompare(b.time);
-        });
+function dayItems() {
+    const items = state.items.filter(
+        item => item.date === dates[day]
+    );
+
+    // 有時間的行程依時間排序
+    const timed = items
+        .filter(item => item.time)
+        .sort((a, b) => a.time.localeCompare(b.time));
+
+    // 沒時間的行程依儲存順序插入
+    const result = [...timed];
+
+    items.forEach(item => {
+        if (item.time) return;
+
+        // 找到此行程在儲存順序中前面的行程
+        const index = items.indexOf(item);
+        const previous = items.slice(0, index)
+            .reverse()
+            .find(x => result.some(r => r.id === x.id));
+
+        if (previous) {
+            const position = result.findIndex(
+                x => x.id === previous.id
+            );
+            result.splice(position + 1, 0, item);
+        } else {
+            result.unshift(item);
+        }
+    });
+
+    return result;
 }
+
 
 function dayExpenses(date = dates[day]) {
     return state.expenses.filter(item => item.date === date);
@@ -1009,7 +1032,7 @@ function openItem(id) {
     $('modalTitle').textContent = item ? '編輯行程' : '新增行程';
     $('editId').value = item?.id || '';
     $('editDate').value = item?.date || dates[day];
-    $('editTime').value = item?.time || '10:00';
+    $('editTime').value = item?.time || '';
     $('editName').value = item?.name || '';
     $('editPlace').value = item?.place || '';
     $('editLat').value = item?.lat ?? '';
