@@ -205,8 +205,6 @@ function isSameData(a, b) {
         );
 }
 // 三方合併：原始資料、本機資料、最新雲端資料
-
-// 三方合併：不同資料保留雙方修改；同一筆衝突由 local 優先
 function mergeTripData(base, local, remote) {
     const merged = {};
 
@@ -238,8 +236,16 @@ function mergeTripData(base, local, remote) {
 
             const changedLocally = !isSameData(before, mine);
 
-            // local 有修改時優先採用 local
-            // 否則採用 remote，包含 remote 的新增或刪除
+            const changedRemotely = !isSameData(before, theirs);
+
+            if (changedLocally && changedRemotely) {
+                if (!isSameData(mine, theirs)) {
+                    throw new Error(
+                        `資料衝突：${type} 中的 ${id} 被雙方同時修改`
+                    );
+                }
+            }
+
             const chosen = changedLocally ? mine : theirs;
 
             if (chosen !== undefined) {
@@ -252,6 +258,64 @@ function mergeTripData(base, local, remote) {
 
     return merged;
 }
+// 等待指定毫秒數
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+// 發生版本衝突時，重新讀取並安全合併
+async function retryVersionConflict(snapshot, baseSnapshot) {
+    const client = window.supabaseClient;
+
+    if (!baseSnapshot) {
+        throw new Error('缺少原始版本，無法安全合併');
+    }
+
+    // 最多重試 3 次
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        console.warn(`⚠️ 版本衝突，3 秒後進行第 ${attempt} 次重試`);
+
+        await sleep(3000);
+
+        // 取得最新雲端資料與版本
+        const cloud = await loadCloudData();
+
+        if (!cloud) {
+            throw new Error('無法取得最新雲端資料');
+        }
+
+        // 使用三方合併，避免覆蓋另一人的修改
+        const merged = mergeTripData(
+            baseSnapshot,
+            snapshot,
+            cloud.trip
+        );
+
+        // 保留較新的本機待同步資料，不直接覆蓋備份
+        // 合併結果先保存在 merged，等待雲端確認成功
+        console.log('☁️ 已完成安全合併，準備嘗試同步');
+
+        const { data, error } = await client.rpc(
+            'update_trip_safely',
+            {
+                p_trip_id: 'japan-trip',
+                p_expected_version: cloud.version,
+                p_new_data: merged
+            }
+        );
+
+        if (error) throw error;
+
+        const result = data?.[0];
+
+        if (result?.update_success) {
+            return {
+                merged,
+                version: Number(result.new_version)
+            };
+        }
+    }
+
+    throw new Error('版本衝突重試 3 次仍未成功');
+}
+
 
 function queueCloudSave() {
     if (!cloudReady || cloudSyncBlocked) {
