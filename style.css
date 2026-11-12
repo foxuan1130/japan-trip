@@ -210,7 +210,9 @@
         color:#8d7872;
         font-size:14px;
         margin-top:4px;
-        white-space:pre-wrap
+        white-space:pre-wrap;
+        overflow-wrap: anywhere;
+        min-width: 0;
     }
     .cost {
         font-size:13px;
