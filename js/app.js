@@ -593,6 +593,17 @@ function renderSummary() {
             : `互抵後：Josh 應付 CCX ${yen(joshOwes - ccxOwes)}`;
 }
 
+function linkify(text) {
+    const safeText = esc(text || '');
+
+    return safeText.replace(
+        /https?:\/\/[^\s<>"']+/gi,
+        url => {
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+        }
+    );
+}
+
 function renderItems() {
     const items = dayItems();
     $('itinerary').innerHTML = items.length ? items.map(item => `
@@ -601,7 +612,7 @@ function renderItems() {
             <div class="itemmain">
                 <div class="itemtop"><strong>${esc(item.time)}　${esc(item.name)}</strong></div>
                 ${item.place ? `<div class="sub">📍 ${esc(item.place)}</div>` : ''}
-                <div class="desc">${esc(item.desc)}</div>
+                <div class="desc">${linkify(item.desc)}</div>
             </div>
             <div class="actions">
                 <button type="button" data-edit="${esc(item.id)}" title="編輯"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil preview-icon"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></button>
