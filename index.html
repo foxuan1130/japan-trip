@@ -162,25 +162,46 @@
     </button>
 </div>
 
+
+<!-- 清單類型切換 -->
+<div class="task-filters">
+    <button type="button" class="task-filter active" data-list="prep">
+        🧳 行前準備
+    </button>
+    <button type="button" class="task-filter" data-list="shopping">
+        🛍️ 購物清單
+    </button>
+</div>
+
+
 <!-- 完成進度 -->
 <p class="notice" id="taskProgress"></p>
 
 <!-- 待辦清單 -->
 <div id="checklist"></div>
 
+
+
 <!-- 新增待辦事項 -->
-<div class="task-add">
+<div class="task-add task-add-with-note">
     <input
         id="newTask"
         type="text"
         placeholder="例如：購買旅遊保險"
     >
 
+    <textarea
+        id="newTaskNote"
+        placeholder="備註（選填）"
+        rows="2"
+    ></textarea>
 
     <button type="button" class="primary" id="addTask">
         ＋ 新增
     </button>
 </div>
+
+
 
 
 </div>
@@ -270,6 +291,48 @@
 </form>
 </div>
 </div>
+
+
+<!-- 行前準備 / 購物清單編輯視窗 -->
+<div class="modal hidden" id="taskEditModal">
+    <div class="dialog">
+        <h2>✏️ 編輯清單項目</h2>
+
+        <form id="taskEditForm">
+            <input type="hidden" id="taskEditId">
+
+            <label for="taskEditName">名稱</label>
+            <input
+                id="taskEditName"
+                type="text"
+                required
+                placeholder="輸入項目名稱"
+            >
+
+            <label for="taskEditNote">備註（選填）</label>
+            <textarea
+                id="taskEditNote"
+                rows="3"
+                placeholder="輸入備註"
+            ></textarea>
+
+            <div class="dialogfooter">
+                <button
+                    type="button"
+                    class="smallbtn"
+                    id="cancelTaskEdit"
+                >
+                    取消
+                </button>
+
+                <button type="submit" class="primary">
+                    儲存修改
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="modal hidden" id="expenseModal">
 <div class="dialog">
 <h2 id="expenseModalTitle">

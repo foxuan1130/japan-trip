@@ -27,6 +27,7 @@ let day = Number.isInteger(state.day) && state.day >= 0 && state.day < dates.len
 let map = null;
 let layer = null;
 let taskFilter = 'CCX';
+let listType = 'prep';
 
 function save() {
     state.day = day;
@@ -614,10 +615,12 @@ function renderItems() {
                 ${item.place ? `<div class="sub">📍 ${esc(item.place)}</div>` : ''}
                 <div class="desc">${linkify(item.desc)}</div>
             </div>
+
             <div class="actions">
                 <button type="button" data-edit="${esc(item.id)}" title="編輯"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil preview-icon"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></button>
                 <button type="button" data-del="${esc(item.id)}" title="刪除"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash preview-icon"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
             </div>
+
         </div>
     `).join('') : '<div class="panel empty">這天還沒有行程，按下方按鈕新增吧！</div>';
 
@@ -920,9 +923,12 @@ function migrateTasks() {
 
 
 function renderTasks() {
-    const visibleTasks = state.tasks.filter(
-        task => task.owner === taskFilter
+
+    const visibleTasks = state.tasks.filter(task =>
+        task.owner === taskFilter &&
+        (task.type || 'prep') === listType
     );
+
 
     const completed = visibleTasks.filter(task => task.done).length;
 
@@ -938,17 +944,47 @@ function renderTasks() {
                     ${task.done ? 'checked' : ''}
                 >
 
-                <span style="flex:1;${task.done ? 'text-decoration:line-through;color:#aaa' : ''}">
-                    ${esc(task.text)}
-                </span>
 
-                <button
-                    type="button"
-                    class="smallbtn"
-                    data-taskdel="${esc(task.id)}"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash preview-icon"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
+                <div style="flex:1;min-width:0;">
+                    <div style="${task.done ? 'text-decoration:line-through;color:#aaa' : ''}">
+                        ${esc(task.text)}
+                    </div>
+
+                    
+                ${task.note ? `<div class="task-note">${linkify(task.note)}</div>` : ''}
+
+                
+</div>
+
+<div class="actions">
+    <button
+        type="button"
+        class="smallbtn"
+        data-taskedit="${esc(task.id)}"
+        title="編輯"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
+            <path d="m15 5 4 4"/>
+        </svg>
+    </button>
+
+    <button
+        type="button"
+        class="smallbtn"
+        data-taskdel="${esc(task.id)}"
+        title="刪除"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 11v6"/>
+            <path d="M14 11v6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <path d="M3 6h18"/>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+    </button>
+</div>
+
             </div>
         `).join('')
         : '<p class="empty">目前沒有待辦事項</p>';
@@ -980,6 +1016,24 @@ function renderTasks() {
         };
     });
 
+document.querySelectorAll('[data-taskedit]').forEach(button => {
+    button.onclick = () => {
+        const task = state.tasks.find(
+            x => String(x.id) === button.dataset.taskedit
+        );
+
+        if (!task) return;
+
+        // 自動填入原本的名稱與備註
+        $('taskEditId').value = task.id;
+        $('taskEditName').value = task.text;
+        $('taskEditNote').value = task.note || '';
+
+        // 打開編輯視窗
+        $('taskEditModal').classList.remove('hidden');
+    };
+});
+
 document.querySelectorAll('[data-taskdel]').forEach(button => {
     button.onclick = () => {
         if (!cloudReady || cloudSyncBlocked) {
@@ -1001,20 +1055,83 @@ document.querySelectorAll('[data-taskdel]').forEach(button => {
     };
 });  
 
-    document.querySelectorAll('.task-filter').forEach(button => {
+    
+    document.querySelectorAll('.task-filter[data-owner]').forEach(button => {
         button.classList.toggle(
             'active',
             button.dataset.owner === taskFilter
         );
     });
+    
+    document.querySelectorAll('.task-filter[data-list]').forEach(button => {
+        button.classList.toggle(
+            'active',
+            button.dataset.list === listType
+        );
+    });
 }
 
-document.querySelectorAll('.task-filter').forEach(button => {
+
+document.querySelectorAll('.task-filter[data-owner]').forEach(button => {
     button.onclick = () => {
         taskFilter = button.dataset.owner;
         renderTasks();
     };
 });
+
+
+document.querySelectorAll('.task-filter[data-list]').forEach(button => {
+    button.onclick = () => {
+        listType = button.dataset.list;
+        renderTasks();
+    };
+});
+
+$('cancelTaskEdit').onclick = () => {
+    $('taskEditModal').classList.add('hidden');
+};
+
+$('taskEditForm').onsubmit = event => {
+    event.preventDefault();
+
+    if (!cloudReady || cloudSyncBlocked) {
+        alert('雲端同步尚未就緒，目前無法編輯清單。');
+        return;
+    }
+
+    const task = state.tasks.find(
+        x => String(x.id) === $('taskEditId').value
+    );
+
+    if (!task) {
+        alert('找不到這個清單項目。');
+        return;
+    }
+
+    const name = $('taskEditName').value.trim();
+    const note = $('taskEditNote').value.trim();
+
+    if (!name) {
+        alert('請輸入項目名稱。');
+        return;
+    }
+
+    task.text = name;
+    task.note = note;
+
+    save();
+    render();
+
+    $('taskEditModal').classList.add('hidden');
+
+    queueCloudSave().catch(error => {
+        console.error('❌ 編輯清單同步失敗：', error);
+        alert('雲端同步失敗，請先不要重新整理網頁。');
+    });
+};
+
+
+
 
 
 
@@ -1336,18 +1453,25 @@ $('addTask').onclick = () => {
         alert('雲端尚未準備完成或同步已暫停，目前無法新增待辦。');
         return;
     }
+    
     const text = $('newTask').value.trim();
+    const note = $('newTaskNote').value.trim();
 
     if (!text) return;
+
 
     state.tasks.push({
         id: makeId(),
         text: text,
+        note: note,
         owner: taskFilter,
+        type: listType,
         done: false
     });
 
+
     $('newTask').value = '';
+    $('newTaskNote').value = '';
     save();
     render();
     // 新增待辦後同步 Supabase

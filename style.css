@@ -323,16 +323,44 @@
     .tabpage.active {
         display:block
     }
+
     .checkline {
-        display:flex;
-        align-items:center;
-        gap:10px;
-        padding:9px;
-        border-bottom:1px solid var(--line)
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px 9px;
+        border-bottom: 1px solid var(--line);
     }
-    .checkline input {
-        width:auto
+
+    /* 行前準備、購物清單：操作按鈕靠右排列 */
+    #checklist .actions {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        margin-left: auto;
+        flex-shrink: 0;
     }
+
+
+    .checkline input[type="checkbox"] {
+        width: auto;
+        flex-shrink: 0;
+        margin-top: 5px;
+    }
+
+    .checkline > div {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .checkline [data-taskdel],
+    .checkline [data-taskedit] {
+        flex-shrink: 0;
+        align-self: flex-start;
+    }
+
     .smallbtn {
         border:1px solid var(--line);
         background:white;
@@ -482,34 +510,29 @@
     font-size: 14px;
 }
 
+
 /* 新增任務區 */
 .task-add {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 10px;
     margin-top: 20px;
 }
 
-.task-add input {
-    flex: 1;
+.task-add input,
+.task-add textarea {
+    width: 100%;
     min-width: 0;
 }
 
 .task-add .primary {
     white-space: nowrap;
-    flex-shrink: 0;
+    align-self: flex-end;
 }
 
-/* 手機版 */
-@media (max-width: 480px) {
-    .task-add {
-        flex-wrap: wrap;
-    }
 
-    .task-add .primary {
-        width: 100%;
-    }
-}
+
 /* 手機及窄視窗排版修正 */
 @media (max-width: 600px) {
 
@@ -549,12 +572,7 @@
     }
 }
 /* 行前準備：垃圾桶按鈕移除外框 */
-#checklist [data-taskdel] {
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    padding: 6px;
-}
+
 
 /* ===== 旅費結算：電腦表格 / 手機卡片 ===== */
 .expenses-desktop {
@@ -695,4 +713,20 @@
         min-width: 0;
         max-width: 100%;
     }
+}
+
+/* 清單文字備註 */
+.task-note {
+    margin-top: 5px;
+    color: #927e78;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    text-align: left;
+}
+
+.task-note a {
+    color: #a65e5b;
+    text-decoration: underline;
 }
