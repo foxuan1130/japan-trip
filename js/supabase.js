@@ -13,7 +13,7 @@
     console.log('Supabase Client 初始化成功');
 })();
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     const client = window.supabaseClient;
 
     const loginButton = document.getElementById('loginButton');
@@ -28,30 +28,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    async function updateLoginUI() {
-        const { data: { session }, error } =
-            await client.auth.getSession();
-
-        if (error) {
-            console.error('取得登入狀態失敗：', error.message);
-            return;
-        }
-
-        loginButton.textContent = session ? '🔓 登出' : '🔐 登入';
-    }
+    let session = null;
 
     loginButton.addEventListener('click', async () => {
-        const { data: { session } } = await client.auth.getSession();
-
         if (session) {
             const { error } = await client.auth.signOut();
 
             if (error) {
                 alert('登出失敗：' + error.message);
-                return;
             }
-
-            await updateLoginUI();
         } else {
             loginStatus.textContent = '';
             loginModal.classList.remove('hidden');
@@ -82,12 +67,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         loginForm.reset();
         loginModal.classList.add('hidden');
-        await updateLoginUI();
     });
 
-    client.auth.onAuthStateChange(() => {
-        updateLoginUI();
+    client.auth.onAuthStateChange((_event, nextSession) => {
+        session = nextSession;
+        loginButton.textContent = session ? '🔓 登出' : '🔐 登入';
+        setTripSession(session);
     });
-
-    await updateLoginUI();
 });

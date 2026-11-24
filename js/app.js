@@ -38,7 +38,7 @@ function save() {
     }
 }
 
-async function loadCloudData() {
+async function loadCloudData(session) {
     const client = window.supabaseClient;
 
     if (!client) {
@@ -46,19 +46,14 @@ async function loadCloudData() {
         return null;
     }
 
-    const { data: sessionData, error: sessionError } =
-        await client.auth.getSession();
-
-    if (sessionError || !sessionData.session) {
-        console.log('🔐 尚未登入，暫時使用本機資料');
-        return null;
-    }
-
     const { data, error } = await client
         .from('trip_data')
         .select('data, version')
         .eq('id', 'japan-trip')
+        .abortSignal(session.signal)
         .maybeSingle();
+
+    if (session !== tripSession) return null;
 
     if (error) {
         console.error('❌ 雲端讀取失敗：', error.message);
@@ -71,12 +66,10 @@ async function loadCloudData() {
     }
 
     console.log('☁️ 雲端旅行資料讀取成功');
-    
-return {
-    trip: data.data,
-    version: data.version
-};
-
+    return {
+        trip: data.data,
+        version: data.version
+    };
 }
 
 let cloudReady = false;
@@ -91,6 +84,16 @@ let cloudSaveQueue = Promise.resolve();
 let cloudChangeRevision = 0;
 
 let cloudSyncBlocked = false;
+let tripUserId = null;
+let tripSession = null;
+
+class DetachedTripSessionError extends Error {}
+
+function assertTripSession(session) {
+    if (session !== tripSession) {
+        throw new DetachedTripSessionError('登入狀態已變更，已停止同步');
+    }
+}
 
 const PENDING_SYNC_KEY = 'japan_trip_v1_1_pending';
 
@@ -262,7 +265,7 @@ function mergeTripData(base, local, remote) {
 // 等待指定毫秒數
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 // 發生版本衝突時，重新讀取並安全合併
-async function retryVersionConflict(snapshot, baseSnapshot) {
+async function retryVersionConflict(snapshot, baseSnapshot, session) {
     const client = window.supabaseClient;
 
     if (!baseSnapshot) {
@@ -274,9 +277,11 @@ async function retryVersionConflict(snapshot, baseSnapshot) {
         console.warn(`⚠️ 版本衝突，3 秒後進行第 ${attempt} 次重試`);
 
         await sleep(3000);
+        assertTripSession(session);
 
         // 取得最新雲端資料與版本
-        const cloud = await loadCloudData();
+        const cloud = await loadCloudData(session);
+        assertTripSession(session);
 
         if (!cloud) {
             throw new Error('無法取得最新雲端資料');
@@ -300,7 +305,9 @@ async function retryVersionConflict(snapshot, baseSnapshot) {
                 p_expected_version: cloud.version,
                 p_new_data: merged
             }
-        );
+        ).abortSignal(session.signal);
+
+        assertTripSession(session);
 
         if (error) throw error;
 
@@ -325,6 +332,8 @@ function queueCloudSave() {
         );
     }
 
+    const session = tripSession;
+
     // 每次編輯都增加修改版本
     cloudChangeRevision++;
 
@@ -347,18 +356,8 @@ function queueCloudSave() {
             // 保留佇列，但不解除同步鎖定
         })
         .then(async () => {
-            if (cloudSyncBlocked) {
-                throw new Error('雲端同步已暫停');
-            }
-
+            assertTripSession(session);
             const client = window.supabaseClient;
-
-            const { data: sessionData, error: sessionError } =
-                await client.auth.getSession();
-
-            if (sessionError || !sessionData.session) {
-                throw new Error('尚未登入 Supabase');
-            }
 
             // 若同步期間再次編輯，繼續處理最新資料
             while (true) {
@@ -385,7 +384,9 @@ function queueCloudSave() {
                         p_expected_version: cloudVersion,
                         p_new_data: snapshot
                     }
-                );
+                ).abortSignal(session.signal);
+
+                assertTripSession(session);
 
                 if (error) throw error;
 
@@ -399,8 +400,10 @@ function queueCloudSave() {
 
                     const retryResult = await retryVersionConflict(
                         snapshot,
-                        baseSnapshot
+                        baseSnapshot,
+                        session
                     );
+                    assertTripSession(session);
 
                     savedSnapshot = retryResult.merged;
                     savedVersion = retryResult.version;
@@ -464,6 +467,7 @@ function queueCloudSave() {
             }
         })
         .catch(error => {
+            assertTripSession(session);
             cloudSyncBlocked = true;
             cloudReady = false;
             setEditingLocked(true);
@@ -650,9 +654,10 @@ function renderItems() {
             render();
             
             queueCloudSave()?.catch(error => {
-            console.error('❌ 刪除行程同步失敗：', error);
-            alert('刪除行程的雲端同步失敗！請保留本機資料，暫時不要重新整理。');
-});
+                if (error instanceof DetachedTripSessionError) return;
+                console.error('❌ 刪除行程同步失敗：', error);
+                alert('刪除行程的雲端同步失敗！請保留本機資料，暫時不要重新整理。');
+            });
 
         };
     });
@@ -725,6 +730,7 @@ function reorder(from, to) {
 
     // 拖曳排序完成後，自動同步至 Supabase
     queueCloudSave()?.catch(error => {
+        if (error instanceof DetachedTripSessionError) return;
         console.error('❌ 行程排序同步失敗：', error);
         alert('行程排序尚未成功同步至雲端，請先不要重新整理網頁。');
     });
@@ -858,6 +864,7 @@ function renderExpenses() {
             render();
 
             queueCloudSave().catch(error => {
+                if (error instanceof DetachedTripSessionError) return;
                 console.error('❌ 刪除旅費同步失敗：', error);
                 alert('刪除旅費尚未成功同步，請先不要重新整理網頁。');
             });
@@ -1008,6 +1015,7 @@ function renderTasks() {
 
                 // 勾選狀態變更後同步 Supabase
                 queueCloudSave().catch(error => {
+                    if (error instanceof DetachedTripSessionError) return;
                     console.error('❌ 待辦同步失敗：', error);
                     alert('待辦尚未成功同步，請先不要重新整理網頁。');
                 });
@@ -1049,6 +1057,7 @@ document.querySelectorAll('[data-taskdel]').forEach(button => {
 
         // 刪除待辦後同步 Supabase
         queueCloudSave().catch(error => {
+            if (error instanceof DetachedTripSessionError) return;
             console.error('❌ 刪除待辦同步失敗：', error);
             alert('刪除待辦尚未成功同步，請先不要重新整理網頁。');
         });
@@ -1125,6 +1134,7 @@ $('taskEditForm').onsubmit = event => {
     $('taskEditModal').classList.add('hidden');
 
     queueCloudSave().catch(error => {
+        if (error instanceof DetachedTripSessionError) return;
         console.error('❌ 編輯清單同步失敗：', error);
         alert('雲端同步失敗，請先不要重新整理網頁。');
     });
@@ -1176,7 +1186,7 @@ function openItem(id) {
 $('prevDay').onclick = () => {
     if (day > 0) {
         day--;
-        save();
+        if (cloudReady && !cloudSyncBlocked) save();
         render();
     }
 };
@@ -1184,7 +1194,7 @@ $('prevDay').onclick = () => {
 $('nextDay').onclick = () => {
     if (day < dates.length - 1) {
         day++;
-        save();
+        if (cloudReady && !cloudSyncBlocked) save();
         render();
     }
 };
@@ -1265,6 +1275,7 @@ $('editForm').onsubmit = event => {
 
     // 行程變更後，自動排隊儲存到 Supabase
     queueCloudSave()?.catch(error => {
+        if (error instanceof DetachedTripSessionError) return;
         console.error('❌ 行程雲端同步失敗：', error);
         alert('雲端同步失敗！資料已保留在本機，請先不要重新整理網頁。');
     });
@@ -1441,6 +1452,7 @@ $('expenseForm').onsubmit = event => {
     render();
 
     queueCloudSave().catch(error => {
+        if (error instanceof DetachedTripSessionError) return;
         console.error('❌ 旅費同步失敗：', error);
         alert('旅費尚未成功同步至雲端，請先不要重新整理網頁。');
     });
@@ -1476,6 +1488,7 @@ $('addTask').onclick = () => {
     render();
     // 新增待辦後同步 Supabase
     queueCloudSave().catch(error => {
+        if (error instanceof DetachedTripSessionError) return;
         console.error('❌ 新增待辦同步失敗：', error);
         alert('新增待辦尚未成功同步，請先不要重新整理網頁。');
     });
@@ -1493,6 +1506,7 @@ function setEditingLocked(locked) {
         '[data-edit]',
         '[data-del]',
         '[data-task]',
+        '[data-taskedit]',
         '[data-taskdel]',
         '[data-exedit]',
         '[data-exdel]',
@@ -1508,13 +1522,35 @@ function setEditingLocked(locked) {
     });
 }
 
-async function startApp() {
+function setTripSession(session) {
+    const userId = session?.user?.id ?? null;
+    if (userId === tripUserId) return;
 
-const hasPendingBackup = checkPendingSyncOnStartup();
+    tripUserId = userId;
+    tripSession?.abort();
+    tripSession = userId === null ? null : new AbortController();
+    cloudReady = false;
+    cloudVersion = null;
+    cloudBaseState = null;
+    setEditingLocked(true);
+    for (const id of ['tripContent', 'modal', 'taskEditModal', 'expenseModal']) {
+        $(id).classList.add('hidden');
+    }
 
-    if (hasPendingBackup) {
+    if (tripSession) {
+        const currentSession = tripSession;
+        // The auth SDK may still hold its lock while notifying listeners.
+        setTimeout(() => loadTripForSession(currentSession), 0);
+    }
+}
+
+async function loadTripForSession(session) {
+    // Let the previous session's writes settle before reading the trip or checking its backup.
+    await cloudSaveQueue.catch(() => {});
+    if (session !== tripSession) return;
+
+    if (checkPendingSyncOnStartup() && !cloudSyncBlocked) {
         cloudSyncBlocked = true;
-        cloudReady = false;
 
         alert(
             '偵測到尚未確認同步的旅行資料備份。\n' +
@@ -1523,80 +1559,58 @@ const hasPendingBackup = checkPendingSyncOnStartup();
         );
     }
 
-    // 先顯示本機資料
-    migrateTasks();
-    initMap();
+    let cloud;
+    try {
+        cloud = await loadCloudData(session);
+    } catch (error) {
+        if (session === tripSession) {
+            console.error('❌ 雲端讀取失敗：', error);
+        }
+    }
+    if (session !== tripSession) return;
 
+    if (!cloud) {
+        alert(
+            '目前無法載入雲端旅行資料。\n' +
+            '為避免資料不同步，已暫時停用編輯功能。\n' +
+            '請確認已登入且網路正常，再重新整理網頁。'
+        );
+        return;
+    }
 
-    // 雲端載入期間禁止編輯
-    setEditingLocked(true);
-
-    // 嘗試讀取雲端資料
-    const cloud = await loadCloudData();
-
- 
-if (!cloud) {
-    cloudReady = false;
-
-    console.warn('⚠️ 雲端資料尚未載入，暫停編輯以保護資料');
-
-    alert(
-        '目前無法載入雲端旅行資料。\n' +
-        '為避免資料不同步，已暫時停用編輯功能。\n' +
-        '請確認已登入且網路正常，再重新整理網頁。'
-    );
-
-    return;
-}
-
-
-    // 確認雲端資料格式正確
-    
     if (!Array.isArray(cloud.trip?.items) ||
         !Array.isArray(cloud.trip?.tasks) ||
         !Array.isArray(cloud.trip?.expenses) ||
         !Number.isSafeInteger(cloud.version) ||
         cloud.version < 1) {
 
-        
         console.error('❌ 雲端資料格式不正確，保留本機資料');
-        cloudReady = false;
         alert('雲端資料格式異常，已暫停編輯，請先檢查資料。');
         return;
-
     }
 
-    
     state = cloud.trip;
     state.day = day;
     $('tripContent').classList.remove('hidden');
+    if (!map) initMap();
     requestAnimationFrame(() => {
-    if (map) {
-        map.invalidateSize();
-        renderMap();
+        if (session === tripSession && map) {
+            map.invalidateSize();
+            renderMap();
         }
     });
-    // 記住目前雲端版本
+
     // 記住目前雲端版本與對應的原始資料
     cloudVersion = cloud.version;
     cloudBaseState = structuredClone(cloud.trip);
     delete cloudBaseState.day;
 
     render();
-
-
-    if (hasPendingBackup) {
-        cloudReady = false;
-        cloudSyncBlocked = true;
-        setEditingLocked(true);
-        console.warn('🔒 存在待同步備份，維持編輯鎖定');
-    } else {
-        cloudReady = true;
-        cloudSyncBlocked = false;
-        setEditingLocked(false);
-    }
+    cloudReady = !cloudSyncBlocked;
+    setEditingLocked(!cloudReady);
 
     console.log('✅ Japan Trip 已載入雲端資料');
 }
 
-startApp();
+migrateTasks();
+setEditingLocked(true);
