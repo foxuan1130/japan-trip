@@ -9,6 +9,9 @@ const seed = {
 
 const $ = id => document.getElementById(id);
 const yen = n => '¥' + Number(n || 0).toLocaleString('ja-JP');
+const TWD_CENTS_PER_JPY = 21;
+const approximateTwd = jpy =>
+    '約 NT$' + Math.round(jpy * TWD_CENTS_PER_JPY / 100).toLocaleString('zh-TW');
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 })[ch]);
@@ -760,6 +763,23 @@ function enableTouchSort() {
 
 
 function renderExpenses() {
+    $('expenseRecordCount').textContent = `共 ${state.expenses.length} 筆消費紀錄`;
+
+    const totals = { ccx: 0, josh: 0, total: 0 };
+    for (const expense of state.expenses) {
+        totals.ccx += Number(expense.ccx || 0);
+        totals.josh += Number(expense.josh || 0);
+        totals.total += Number(expense.total || 0);
+    }
+    $('expenseSummaryCcx').textContent = yen(totals.ccx);
+    $('expenseSummaryJosh').textContent = yen(totals.josh);
+    $('expenseSummaryTotal').textContent = yen(totals.total);
+    $('expenseSummaryCcxTwd').textContent = approximateTwd(totals.ccx);
+    $('expenseSummaryJoshTwd').textContent = approximateTwd(totals.josh);
+    $('expenseSummaryTotalTwd').textContent = approximateTwd(totals.total);
+    $('expenseSummaryRate').textContent =
+        `固定匯率 ¥1 = NT$${(TWD_CENTS_PER_JPY / 100).toFixed(2)}`;
+
     const expenses = [...state.expenses].sort(
         (a, b) => dates.indexOf(a.date) - dates.indexOf(b.date)
     );

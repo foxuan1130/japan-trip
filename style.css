@@ -574,7 +574,102 @@
 /* 行前準備：垃圾桶按鈕移除外框 */
 
 
+.panel.expense-summary {
+    padding: 14px 16px;
+}
+
+.expense-summary h2 {
+    margin: 0 0 8px;
+}
+
+.expense-summary .expense-summary-amounts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    color: #3d3034;
+    overflow-wrap: anywhere;
+}
+
+.expense-summary .expense-summary-person {
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+}
+
+.expense-summary .expense-summary-ccx {
+    background: #fbe7ed;
+}
+
+.expense-summary .expense-summary-josh {
+    background: #e6f0fb;
+}
+
+.expense-summary dd {
+    margin: 2px 0 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.expense-summary .expense-summary-twd {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.expense-summary .expense-summary-rate {
+    margin: 0 0 16px;
+    color: #665450;
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+}
+
+.expense-summary .expense-summary-total {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 2px 8px;
+    min-width: 0;
+    padding-top: 8px;
+    border-top: 1px solid #e5d9d3;
+}
+
+.expense-summary .expense-summary-total dt {
+    grid-row: 1 / span 2;
+    min-width: 0;
+}
+
+.expense-summary .expense-summary-total dd {
+    grid-column: 2;
+    min-width: 0;
+    margin: 0;
+    text-align: right;
+}
+
 /* ===== 旅費結算：電腦表格 / 手機卡片 ===== */
+.expense-settlement-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+}
+
+.expense-settlement-heading h2 {
+    margin: 0;
+}
+
+.expense-settlement-heading #expenseRecordCount {
+    margin: 4px 0 0;
+    color: #927e78;
+    font-size: 14px;
+}
+
+.expense-settlement-heading #addExpense {
+    min-height: 44px;
+    margin-left: auto;
+}
+
 .expenses-desktop {
     display: block;
 }
