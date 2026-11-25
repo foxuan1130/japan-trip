@@ -207,19 +207,41 @@
 </div>
 </section>
 <section class="tabpage" id="expenses">
+<section class="panel expense-summary" aria-labelledby="expenseSummaryHeading">
+    <h2 id="expenseSummaryHeading">💰 個別總消費</h2>
+    <p id="expenseSummaryRate" class="expense-summary-rate"></p>
+    <dl class="expense-summary-amounts">
+        <div class="expense-summary-person expense-summary-ccx">
+            <dt>🌸 CCX</dt>
+            <dd id="expenseSummaryCcx">¥0</dd>
+            <dd id="expenseSummaryCcxTwd" class="expense-summary-twd">約 NT$0</dd>
+        </div>
+        <div class="expense-summary-person expense-summary-josh">
+            <dt>🌿 Josh</dt>
+            <dd id="expenseSummaryJosh">¥0</dd>
+            <dd id="expenseSummaryJoshTwd" class="expense-summary-twd">約 NT$0</dd>
+        </div>
+        <div class="expense-summary-total">
+            <dt>兩人總消費</dt>
+            <dd id="expenseSummaryTotal">¥0</dd>
+            <dd id="expenseSummaryTotalTwd" class="expense-summary-twd">約 NT$0</dd>
+        </div>
+    </dl>
+</section>
 <div class="panel">
-    <h2>
-    💰 旅費結算
-    </h2>
+    <div class="expense-settlement-heading">
+        <div>
+            <h2>💰 旅費結算</h2>
+            <p id="expenseRecordCount">共 0 筆消費紀錄</p>
+        </div>
+        <button class="primary" id="addExpense">
+            ＋ 新增消費
+        </button>
+    </div>
     <p class="notice">
     記錄誰付款、CCX 與 Josh 各自應負擔的金額，不強制平分。
     </p>
     <div id="allExpenses">
-    </div>
-    <div class="center">
-    <button class="primary" id="addExpense">
-    ＋ 新增消費
-    </button>
     </div>
 </div>
 </section>
