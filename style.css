@@ -612,6 +612,10 @@
     overflow-wrap: anywhere;
 }
 
+.expense-summary dd:not(.expense-summary-twd) {
+    color: var(--ink);
+}
+
 .expense-summary .expense-summary-twd {
     font-size: 0.875rem;
     font-weight: 500;
@@ -619,8 +623,7 @@
 
 .expense-summary .expense-summary-rate {
     margin: 0 0 16px;
-    color: #665450;
-    font-size: 0.875rem;
+    font-size: 13px;
     overflow-wrap: anywhere;
 }
 
@@ -638,6 +641,8 @@
 .expense-summary .expense-summary-total dt {
     grid-row: 1 / span 2;
     min-width: 0;
+    color: var(--ink);
+    font-weight: 700;
 }
 
 .expense-summary .expense-summary-total dd {
@@ -661,8 +666,13 @@
 
 .expense-settlement-heading #expenseRecordCount {
     margin: 4px 0 0;
-    color: #927e78;
     font-size: 14px;
+}
+
+.expense-settlement-heading #expenseRecordCount,
+.expense-summary .expense-summary-twd,
+.expense-summary .expense-summary-rate {
+    color: #927e78;
 }
 
 .expense-settlement-heading #addExpense {
@@ -738,8 +748,12 @@
         margin-top: 6px;
     }
 
-    .expense-card-total {
+    .expense-card-total,
+    .expense-summary dd:not(.expense-summary-twd) {
         color: #61443f;
+    }
+
+    .expense-card-total {
         font-size: 25px;
         font-weight: 700;
         min-width: 0;
